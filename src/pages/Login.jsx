@@ -23,6 +23,8 @@ export default function Login() {
       
       if (user.role === 'Facility Coordinator') {
         navigate('/reservations');
+      } else if (user.role === 'Student') {
+        navigate('/student/courses');
       } else {
         navigate('/dashboard');
       }
@@ -34,7 +36,7 @@ export default function Login() {
   return (
     <div className="centered-card-wrapper">
       <div className="glass-card" style={{ maxWidth: '400px', width: '100%' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Admin Login</h2>
+        <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Login</h2>
         
         {error && <div className="alert alert-danger">{error}</div>}
 

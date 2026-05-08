@@ -111,7 +111,7 @@ export default function ApplyOnline() {
         </form>
 
         <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <a href="/login" style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textDecoration: 'none' }}>Admin Login</a>
+          <a href="/login" style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textDecoration: 'none' }}>Login</a>
         </div>
       </div>
     </div>

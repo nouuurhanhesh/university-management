@@ -13,6 +13,8 @@ import ApplicationList from './pages/ApplicationList';
 import RoomReservation from './pages/RoomReservation';
 import Courses from './pages/Courses';
 import Staff from './pages/Staff';
+import StudentCourses from './pages/StudentCourses';
+import StudentProfile from './pages/StudentProfile';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -24,6 +26,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     // If not allowed, send them to their specific default page
     if (user.role === 'Facility Coordinator') return <Navigate to="/reservations" replace />;
+    if (user.role === 'Student') return <Navigate to="/student/courses" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -31,7 +34,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     <>
       <nav className="navbar">
         <div className="nav-brand">
-          <Link to={user.role === 'Facility Coordinator' ? '/reservations' : '/dashboard'} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 'bold', fontSize: '1.2rem' }}>
+          <Link to={user.role === 'Facility Coordinator' ? '/reservations' : user.role === 'Student' ? '/student/courses' : '/dashboard'} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 'bold', fontSize: '1.2rem' }}>
             UniManage
           </Link>
         </div>
@@ -47,6 +50,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
           )}
           {user.role === 'Facility Coordinator' && (
             <Link to="/reservations">Reservations</Link>
+          )}
+          {user.role === 'Student' && (
+            <>
+              <Link to="/student/courses">Course Catalog</Link>
+              <Link to="/student/profile">My Profile</Link>
+            </>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -91,6 +100,10 @@ function App() {
           <Route path="/staff" element={<ProtectedRoute allowedRoles={['Administrator']}><Staff /></ProtectedRoute>} />
           
           <Route path="/reservations" element={<ProtectedRoute allowedRoles={['Facility Coordinator', 'Administrator']}><RoomReservation /></ProtectedRoute>} />
+
+          {/* Student Routes */}
+          <Route path="/student/courses" element={<ProtectedRoute allowedRoles={['Student']}><StudentCourses /></ProtectedRoute>} />
+          <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['Student']}><StudentProfile /></ProtectedRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

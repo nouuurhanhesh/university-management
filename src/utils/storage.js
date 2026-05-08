@@ -25,13 +25,21 @@ export const initStorage = () => {
   if (!users) {
     setItem(KEYS.USERS, {
       admin: { username: "admin", password: "admin123", role: "Administrator" },
-      facility: { username: "facility", password: "facility123", role: "Facility Coordinator" }
+      facility: { username: "facility", password: "facility123", role: "Facility Coordinator" },
+      student: { username: "student", password: "student123", role: "Student" }
     });
   }
 
   if (!localStorage.getItem(KEYS.STUDENTS)) setItem(KEYS.STUDENTS, []);
   if (!localStorage.getItem(KEYS.APPLICATIONS)) setItem(KEYS.APPLICATIONS, []);
-  if (!localStorage.getItem(KEYS.COURSES)) setItem(KEYS.COURSES, []);
+  if (!localStorage.getItem(KEYS.COURSES)) {
+    setItem(KEYS.COURSES, [
+      { id: "1", code: "CS101", name: "Introduction to Computer Science", credits: 3, department: "Computer Science", description: "Basic concepts of programming." },
+      { id: "2", code: "ENG201", name: "Engineering Mechanics", credits: 4, department: "Engineering", description: "Statics and dynamics." },
+      { id: "3", code: "MATH101", name: "Calculus I", credits: 4, department: "Mathematics", description: "Limits, derivatives, integrals." },
+      { id: "4", code: "BUS101", name: "Introduction to Business", credits: 3, department: "Business Administration", description: "Business concepts." }
+    ]);
+  }
   if (!localStorage.getItem(KEYS.STAFF)) setItem(KEYS.STAFF, []);
   if (!localStorage.getItem(KEYS.AUDIT)) setItem(KEYS.AUDIT, []);
 };
