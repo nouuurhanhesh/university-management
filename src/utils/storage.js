@@ -124,9 +124,27 @@ export const saveApplication = (application) => {
 
 export const updateApplicationStatus = (id, newStatus) => {
   let applications = getApplications();
-  applications = applications.map((app) =>
-    app.id === id ? { ...app, status: newStatus } : app
-  );
+  applications = applications.map((app) => {
+    if (app.id === id) {
+      if (newStatus === 'Accepted' && app.status !== 'Accepted') {
+        const existingStudent = getStudents().find(s => s.email === app.email);
+        if (!existingStudent) {
+          const newStudent = {
+            name: app.applicantName,
+            email: app.email,
+            department: app.desiredDepartment,
+            level: 'Year 1',
+            phone: app.phone,
+            id: generateStudentId(),
+            createdAt: new Date().toISOString()
+          };
+          saveStudent(newStudent);
+        }
+      }
+      return { ...app, status: newStatus };
+    }
+    return app;
+  });
   setItem(KEYS.APPLICATIONS, applications);
 };
 

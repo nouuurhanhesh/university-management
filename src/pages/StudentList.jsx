@@ -19,7 +19,15 @@ export default function StudentList() {
 
   return (
     <div className="glass-card">
-      <h2>Enrolled Students</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h2 style={{ margin: 0 }}>Enrolled Students</h2>
+        <button 
+          className="btn-primary" 
+          onClick={() => navigate('/students/create')}
+        >
+          Add New Student
+        </button>
+      </div>
       <div className="search-bar">
         <input 
           type="text" 
