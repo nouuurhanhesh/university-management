@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, NavLink } from 'react-router-dom';
 import { initStorage, isUserLoggedIn, logoutUser, getLoggedInUser } from './utils/storage';
 
 // Pages
@@ -14,7 +14,9 @@ import RoomReservation from './pages/RoomReservation';
 import Courses from './pages/Courses';
 import Staff from './pages/Staff';
 import StudentCourses from './pages/StudentCourses';
+import StudentMyCourses from './pages/StudentMyCourses';
 import StudentProfile from './pages/StudentProfile';
+import ParentDashboard from './pages/ParentDashboard';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -27,6 +29,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     // If not allowed, send them to their specific default page
     if (user.role === 'Facility Coordinator') return <Navigate to="/reservations" replace />;
     if (user.role === 'Student') return <Navigate to="/student/courses" replace />;
+    if (user.role === 'Parent') return <Navigate to="/parent/dashboard" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -34,32 +37,36 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     <>
       <nav className="navbar">
         <div className="nav-brand">
-          <Link to={user.role === 'Facility Coordinator' ? '/reservations' : user.role === 'Student' ? '/student/courses' : '/dashboard'} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 'bold', fontSize: '1.2rem' }}>
+          <Link to={user.role === 'Facility Coordinator' ? '/reservations' : user.role === 'Student' ? '/student/courses' : user.role === 'Parent' ? '/parent/dashboard' : '/dashboard'} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 'bold', fontSize: '1.2rem' }}>
             UniManage
           </Link>
         </div>
         <div className="nav-links">
           {user.role === 'Administrator' && (
             <>
-              <Link to="/dashboard">Dashboard</Link>
-              <Link to="/students/list">Students</Link>
-              <Link to="/applications">Applications</Link>
-              <Link to="/courses">Courses</Link>
-              <Link to="/staff">Staff</Link>
+              <NavLink to="/dashboard">Dashboard</NavLink>
+              <NavLink to="/students/list">Students</NavLink>
+              <NavLink to="/applications">Applications</NavLink>
+              <NavLink to="/courses">Courses</NavLink>
+              <NavLink to="/staff">Staff</NavLink>
             </>
           )}
           {user.role === 'Facility Coordinator' && (
-            <Link to="/reservations">Reservations</Link>
+            <NavLink to="/reservations">Reservations</NavLink>
           )}
           {user.role === 'Student' && (
             <>
-              <Link to="/student/courses">Course Catalog</Link>
-              <Link to="/student/profile">My Profile</Link>
+              <NavLink to="/student/courses">Course Catalog</NavLink>
+              <NavLink to="/student/my-courses">My Courses</NavLink>
+              <NavLink to="/student/profile">My Profile</NavLink>
             </>
           )}
+          {user.role === 'Parent' && (
+            <NavLink to="/parent/dashboard">Parent Portal</NavLink>
+          )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>{user.username} ({user.role})</span>
+        <div className="nav-user-section">
+          <span className="user-chip">{user.username} ({user.role})</span>
           <button 
             className="logout-btn" 
             onClick={() => {
@@ -103,7 +110,11 @@ function App() {
 
           {/* Student Routes */}
           <Route path="/student/courses" element={<ProtectedRoute allowedRoles={['Student']}><StudentCourses /></ProtectedRoute>} />
+          <Route path="/student/my-courses" element={<ProtectedRoute allowedRoles={['Student']}><StudentMyCourses /></ProtectedRoute>} />
           <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['Student']}><StudentProfile /></ProtectedRoute>} />
+
+          {/* Parent Route */}
+          <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={['Parent']}><ParentDashboard /></ProtectedRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

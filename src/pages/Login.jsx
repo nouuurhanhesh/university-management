@@ -25,6 +25,8 @@ export default function Login() {
         navigate('/reservations');
       } else if (user.role === 'Student') {
         navigate('/student/courses');
+      } else if (user.role === 'Parent') {
+        navigate('/parent/dashboard');
       } else {
         navigate('/dashboard');
       }

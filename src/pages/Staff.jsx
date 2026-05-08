@@ -38,6 +38,15 @@ export default function Staff() {
       return;
     }
 
+    const isDuplicate = staffList.some(staff => 
+      staff.email === form.email || (form.phone && staff.phone === form.phone)
+    );
+
+    if (isDuplicate) {
+      setError('This email or phone number is already registered for another staff member.');
+      return;
+    }
+
     const newStaff = {
       ...form,
       id: Date.now().toString(),

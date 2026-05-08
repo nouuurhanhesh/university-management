@@ -1,6 +1,6 @@
 // FAO-05: Apply Online
 import React, { useState } from 'react';
-import { saveApplication, generateApplicationId } from '../utils/storage';
+import { saveApplication, generateApplicationId, getApplications, getStudents } from '../utils/storage';
 
 export default function ApplyOnline() {
   const [formData, setFormData] = useState({
@@ -44,6 +44,18 @@ export default function ApplyOnline() {
     const gpa = parseFloat(formData.highSchoolGPA);
     if (isNaN(gpa) || gpa < 0 || gpa > 100) {
       setMessage({ type: 'danger', text: 'GPA must be between 0 and 100.' });
+      return;
+    }
+
+    const existingApps = getApplications();
+    const existingStudents = getStudents();
+
+    const isDuplicate = 
+      existingApps.some(app => app.email === formData.email || app.phone === formData.phone) ||
+      existingStudents.some(student => student.email === formData.email || student.phone === formData.phone);
+
+    if (isDuplicate) {
+      setMessage({ type: 'danger', text: 'This email or phone number is already registered in the system.' });
       return;
     }
 

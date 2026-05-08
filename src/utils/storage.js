@@ -5,7 +5,9 @@ const KEYS = {
   STAFF: "staff",
   AUDIT: "auditLog",
   USERS: "systemUsers",
-  AUTH: "loggedInUser"
+  AUTH: "loggedInUser",
+  MESSAGES: "messages",
+  PROGRESS: "progress"
 };
 
 const safeParse = (key, defaultValue) => {
@@ -21,14 +23,23 @@ const setItem = (key, value) => {
 };
 
 export const initStorage = () => {
-  const users = safeParse(KEYS.USERS, null);
+  let users = safeParse(KEYS.USERS, null);
   if (!users) {
-    setItem(KEYS.USERS, {
+    users = {
       admin: { username: "admin", password: "admin123", role: "Administrator" },
       facility: { username: "facility", password: "facility123", role: "Facility Coordinator" },
-      student: { username: "student", password: "student123", role: "Student" }
-    });
+      parent: { username: "parent", password: "parent123", role: "Parent" }
+    };
   }
+  
+  if (!users.student) {
+    users.student = { username: "student", password: "student123", role: "Student" };
+  }
+  if (!users.parent) {
+    users.parent = { username: "parent", password: "parent123", role: "Parent" };
+  }
+  
+  setItem(KEYS.USERS, users);
 
   if (!localStorage.getItem(KEYS.STUDENTS)) setItem(KEYS.STUDENTS, []);
   if (!localStorage.getItem(KEYS.APPLICATIONS)) setItem(KEYS.APPLICATIONS, []);
@@ -42,6 +53,21 @@ export const initStorage = () => {
   }
   if (!localStorage.getItem(KEYS.STAFF)) setItem(KEYS.STAFF, []);
   if (!localStorage.getItem(KEYS.AUDIT)) setItem(KEYS.AUDIT, []);
+  if (!localStorage.getItem(KEYS.MESSAGES)) setItem(KEYS.MESSAGES, []);
+  if (!localStorage.getItem(KEYS.PROGRESS)) {
+    setItem(KEYS.PROGRESS, {
+      grades: [
+        { subject: 'Computer Science', grade: 'A', remarks: 'Excellent work' },
+        { subject: 'Mathematics', grade: 'B+', remarks: 'Good, but needs focus on Calculus' },
+        { subject: 'Physics', grade: 'A-', remarks: 'Great lab reports' }
+      ],
+      attendance: [
+        { date: '2023-10-01', status: 'Present' },
+        { date: '2023-10-02', status: 'Present' },
+        { date: '2023-10-03', status: 'Absent' }
+      ]
+    });
+  }
 };
 
 export const getUsers = () => safeParse(KEYS.USERS, {});
@@ -135,19 +161,16 @@ export const updateApplicationStatus = (id, newStatus) => {
   applications = applications.map((app) => {
     if (app.id === id) {
       if (newStatus === 'Accepted' && app.status !== 'Accepted') {
-        const existingStudent = getStudents().find(s => s.email === app.email);
-        if (!existingStudent) {
-          const newStudent = {
-            name: app.applicantName,
-            email: app.email,
-            department: app.desiredDepartment,
-            level: 'Year 1',
-            phone: app.phone,
-            id: generateStudentId(),
-            createdAt: new Date().toISOString()
-          };
-          saveStudent(newStudent);
-        }
+        const newStudent = {
+          name: app.applicantName,
+          email: app.email,
+          department: app.desiredDepartment,
+          level: 'Year 1',
+          phone: app.phone,
+          id: generateStudentId(),
+          createdAt: new Date().toISOString()
+        };
+        saveStudent(newStudent);
       }
       return { ...app, status: newStatus };
     }
@@ -164,4 +187,19 @@ export const generateApplicationId = () => {
     ...applications.map(app => parseInt(app.id.split('-')[1]))
   );
   return `APP-${String(lastId + 1).padStart(3, "0")}`;
+};
+
+// --- Parent Features ---
+export const getProgress = () => safeParse(KEYS.PROGRESS, { grades: [], attendance: [] });
+
+export const getMessages = () => safeParse(KEYS.MESSAGES, []);
+
+export const saveMessage = (message) => {
+  const messages = getMessages();
+  messages.push({
+    ...message,
+    id: Date.now().toString(),
+    timestamp: new Date().toISOString()
+  });
+  setItem(KEYS.MESSAGES, messages);
 };
