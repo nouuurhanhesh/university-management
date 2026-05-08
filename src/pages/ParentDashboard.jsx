@@ -1,103 +1,196 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { getProgress, getMessages, saveMessage, getLoggedInUser } from '../utils/storage';
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  appendConversationMessage,
+  buildConversationId,
+  getLoggedInUser,
+  getParentLinkedStudentId,
+  getProfessorAccounts,
+  getProgressForStudent,
+  getStudentById,
+  markConversationSeen,
+} from "../utils/storage";
+import { useConversationMessages } from "../hooks/useConversationMessages";
 
 export default function ParentDashboard() {
-  const [activeTab, setActiveTab] = useState('progress');
-  const [progress, setProgress] = useState({ grades: [], attendance: [] });
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
   const user = getLoggedInUser();
+  const [activeTab, setActiveTab] = useState("progress");
+
+  const childId = user?.username ? getParentLinkedStudentId(user.username) : null;
+  const child = childId ? getStudentById(childId) : null;
+  const progress = childId ? getProgressForStudent(childId) : { grades: [], attendance: [] };
+
+  const professors = useMemo(() => getProfessorAccounts(), []);
+  const [selectedProfessor, setSelectedProfessor] = useState("");
+
+  const professorUsername =
+    selectedProfessor && professors.some((p) => p.username === selectedProfessor)
+      ? selectedProfessor
+      : professors[0]?.username || "";
+
+  const conversationId =
+    user?.username && professorUsername && childId
+      ? buildConversationId(user.username, professorUsername, childId)
+      : null;
+
+  const { messages } = useConversationMessages(
+    user?.username,
+    user?.role,
+    conversationId,
+  );
+
+  const [newMessage, setNewMessage] = useState("");
   const chatEndRef = useRef(null);
+  const prevLastMsgIdRef = useRef(null);
 
-  // Load progress
   useEffect(() => {
-    setProgress(getProgress());
-  }, []);
+    prevLastMsgIdRef.current = null;
+  }, [conversationId]);
 
-  // Poll for messages to simulate "real-time" and load history
   useEffect(() => {
-    const fetchMessages = () => {
-      setMessages(getMessages());
-    };
-
-    fetchMessages(); // initial load
-    const interval = setInterval(fetchMessages, 2000); // poll every 2s
-    return () => clearInterval(interval);
-  }, []);
-
-  // Scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (activeTab === 'chat' && chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (activeTab === "chat" && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, activeTab]);
 
+  useEffect(() => {
+    if (!messages.length || !conversationId || !user?.username) return;
+    const last = messages[messages.length - 1];
+    const isViewingChat =
+      activeTab === "chat" &&
+      !!professorUsername &&
+      typeof document !== "undefined" &&
+      document.visibilityState === "visible";
+
+    if (isViewingChat && last.fromUsername !== user.username) {
+      markConversationSeen(user.username, conversationId, last.timestamp);
+    }
+
+    const prevId = prevLastMsgIdRef.current;
+    if (prevId === null) {
+      prevLastMsgIdRef.current = last.id;
+      return;
+    }
+    if (last.id === prevId) return;
+    prevLastMsgIdRef.current = last.id;
+
+    if (last.fromUsername === user.username) return;
+    if (isViewingChat) return;
+    if (typeof document !== "undefined" && !document.hidden) return;
+
+    try {
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        new Notification(`New message from ${last.fromUsername}`, {
+          body: last.body.slice(0, 160),
+        });
+      }
+    } catch {
+      // ignore
+    }
+  }, [messages, conversationId, user?.username, activeTab, professorUsername]);
+
+  const requestNotifications = () => {
+    if (typeof Notification === "undefined" || !Notification.requestPermission) return;
+    Notification.requestPermission();
+  };
+
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !conversationId || !childId || !user?.username) return;
 
-    saveMessage({
-      sender: user.username,
-      role: user.role,
-      text: newMessage.trim()
+    appendConversationMessage({
+      conversationId,
+      studentId: childId,
+      fromUsername: user.username,
+      fromRole: "Parent",
+      body: newMessage.trim(),
     });
+    setNewMessage("");
+  };
 
-    setNewMessage('');
-    setMessages(getMessages()); // update immediately
+  const attendanceBadge = (status) => {
+    if (status === "Present") return "badge-accepted";
+    if (status === "Absent") return "badge-rejected";
+    return "badge-pending";
   };
 
   return (
-    <div className="glass-card" style={{ maxWidth: '800px', margin: '0 auto' }}>
-      <h2 style={{ marginBottom: '0.5rem' }}>Parent Portal</h2>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Monitor your child's progress and communicate with teachers.</p>
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
-        <button
-          className={activeTab === 'progress' ? 'btn-primary' : 'btn-secondary'}
-          style={activeTab !== 'progress' ? { background: '#f1f5f9', color: '#334155' } : {}}
-          onClick={() => setActiveTab('progress')}
-        >
-          View Progress
-        </button>
-        <button
-          className={activeTab === 'chat' ? 'btn-primary' : 'btn-secondary'}
-          style={activeTab !== 'chat' ? { background: '#f1f5f9', color: '#334155' } : {}}
-          onClick={() => setActiveTab('chat')}
-        >
-          Chat with Teacher
+    <div className="glass-card parent-portal">
+      <div className="parent-portal-header">
+        <div>
+          <h2 style={{ marginBottom: "0.35rem" }}>Parent Portal</h2>
+          <p style={{ color: "var(--text-muted)", margin: 0 }}>
+            View your child’s progress (read-only) and message their teachers in real time.
+          </p>
+        </div>
+        <button type="button" className="btn-secondary" onClick={requestNotifications}>
+          Enable message alerts
         </button>
       </div>
 
-      {/* Progress Tab */}
-      {activeTab === 'progress' && (
-        <div>
-          <h3 style={{ marginBottom: '1rem', borderBottom: '2px solid var(--primary-color)', display: 'inline-block' }}>Academic Grades</h3>
-          <div className="table-container" style={{ marginBottom: '2rem' }}>
+      <div className="parent-tabs">
+        <button
+          type="button"
+          className={activeTab === "progress" ? "btn-primary" : "btn-secondary"}
+          onClick={() => setActiveTab("progress")}
+        >
+          Child progress
+        </button>
+        <button
+          type="button"
+          className={activeTab === "chat" ? "btn-primary" : "btn-secondary"}
+          onClick={() => setActiveTab("chat")}
+        >
+          Chat with teacher
+        </button>
+      </div>
+
+      {activeTab === "progress" && (
+        <div className="parent-progress">
+          <div className="read-only-banner" role="status">
+            Read-only: grades and attendance cannot be edited here (CPT-01).
+          </div>
+
+          <div className="child-summary">
+            <h3>Student</h3>
+            {child ? (
+              <p>
+                <strong>{child.name}</strong> · {child.id} · {child.department} · {child.level}
+              </p>
+            ) : (
+              <p className="text-muted">No student is linked to this parent account. Contact the registrar.</p>
+            )}
+          </div>
+
+          <h3 className="section-title">Grades</h3>
+          <div className="table-container" style={{ marginBottom: "2rem" }}>
             <table>
               <thead>
                 <tr>
-                  <th>Subject</th>
+                  <th>Course / subject</th>
                   <th>Grade</th>
                   <th>Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 {progress.grades.map((g, idx) => (
-                  <tr key={idx}>
+                  <tr key={`${g.subject}-${idx}`}>
                     <td>{g.subject}</td>
-                    <td style={{ fontWeight: 'bold' }}>{g.grade}</td>
+                    <td style={{ fontWeight: 700 }}>{g.grade}</td>
                     <td>{g.remarks}</td>
                   </tr>
                 ))}
                 {progress.grades.length === 0 && (
-                  <tr><td colSpan="3" style={{ textAlign: 'center' }}>No grades recorded yet.</td></tr>
+                  <tr>
+                    <td colSpan="3" style={{ textAlign: "center", padding: "2rem" }}>
+                      No grades on file for this student.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          <h3 style={{ marginBottom: '1rem', borderBottom: '2px solid var(--primary-color)', display: 'inline-block' }}>Attendance Record</h3>
+          <h3 className="section-title">Attendance</h3>
           <div className="table-container">
             <table>
               <thead>
@@ -108,17 +201,19 @@ export default function ParentDashboard() {
               </thead>
               <tbody>
                 {progress.attendance.map((a, idx) => (
-                  <tr key={idx}>
+                  <tr key={`${a.date}-${idx}`}>
                     <td>{new Date(a.date).toLocaleDateString()}</td>
                     <td>
-                      <span className={`badge ${a.status === 'Present' ? 'badge-accepted' : 'badge-rejected'}`}>
-                        {a.status}
-                      </span>
+                      <span className={`badge ${attendanceBadge(a.status)}`}>{a.status}</span>
                     </td>
                   </tr>
                 ))}
                 {progress.attendance.length === 0 && (
-                  <tr><td colSpan="2" style={{ textAlign: 'center' }}>No attendance records found.</td></tr>
+                  <tr>
+                    <td colSpan="2" style={{ textAlign: "center", padding: "2rem" }}>
+                      No attendance records for this student.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -126,56 +221,84 @@ export default function ParentDashboard() {
         </div>
       )}
 
-      {/* Chat Tab */}
-      {activeTab === 'chat' && (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '500px', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+      {activeTab === "chat" && (
+        <div className="parent-messaging">
+          <p className="text-muted" style={{ marginBottom: "1rem" }}>
+            Messages are stored, scoped to you and the selected professor, and sync in real time across open windows
+            (CPT-02, CPT-05).
+          </p>
 
-          <div style={{ background: '#f8fafc', padding: '1rem', borderBottom: '1px solid #e2e8f0' }}>
-            <strong>Teacher / Administration Chat</strong>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Real-time secure messaging</div>
-          </div>
-
-          <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', background: '#ffffff' }}>
-            {messages.length === 0 ? (
-              <div style={{ margin: 'auto', color: 'var(--text-muted)' }}>No messages yet. Send a message to start communicating.</div>
-            ) : (
-              messages.map(msg => {
-                const isMe = msg.sender === user.username;
-                return (
-                  <div key={msg.id} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.2rem', textAlign: isMe ? 'right' : 'left' }}>
-                      {msg.sender} • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                    <div style={{
-                      padding: '0.75rem 1rem',
-                      borderRadius: '12px',
-                      background: isMe ? 'var(--primary-color)' : '#f1f5f9',
-                      color: isMe ? '#100f0fff' : '#334155',
-                      borderBottomRightRadius: isMe ? '0' : '12px',
-                      borderBottomLeftRadius: isMe ? '12px' : '0'
-                    }}>
-                      {msg.text}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          <form onSubmit={handleSendMessage} style={{ display: 'flex', padding: '1rem', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
-            <input
-              type="text"
+          <div className="form-group" style={{ maxWidth: "320px" }}>
+            <label>Teacher (professor account)</label>
+            <select
               className="form-control"
-              style={{ flex: 1, marginRight: '1rem', marginBottom: 0 }}
-              placeholder="Type your message..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-            />
-            <button type="submit" className="btn-primary" style={{ whiteSpace: 'nowrap' }}>
-              Send
-            </button>
-          </form>
+              value={professorUsername}
+              onChange={(e) => setSelectedProfessor(e.target.value)}
+            >
+              {professors.length === 0 && <option value="">No professors in system</option>}
+              {professors.map((p) => (
+                <option key={p.username} value={p.username}>
+                  {p.username}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="chat-panel">
+            <div className="chat-panel-header">
+              <div>
+                <strong>Conversation</strong>
+                <div className="chat-panel-sub">
+                  {child ? `${child.name} (${child.id})` : "Student"} · Professor: {professorUsername || "—"}
+                </div>
+              </div>
+              <span className="delivered-pill">End-to-end stored · delivered when saved</span>
+            </div>
+
+            <div className="chat-messages">
+              {messages.length === 0 ? (
+                <div className="chat-empty">No messages yet. Say hello to start the thread.</div>
+              ) : (
+                messages.map((msg) => {
+                  const isMe = msg.fromUsername === user?.username;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`chat-bubble-row ${isMe ? "me" : "them"}`}
+                    >
+                      <div className="chat-meta">
+                        {msg.fromUsername} · {msg.fromRole} ·{" "}
+                        {new Date(msg.timestamp).toLocaleString()}
+                      </div>
+                      <div className={`chat-bubble ${isMe ? "me" : "them"}`}>
+                        {msg.body}
+                        {isMe && msg.delivered && (
+                          <span className="delivered-mark" title="Stored and delivered">
+                            ✓
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            <form className="chat-composer" onSubmit={handleSendMessage}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Write a message…"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                disabled={!conversationId || !professors.length}
+              />
+              <button type="submit" className="btn-primary" disabled={!conversationId || !professors.length}>
+                Send
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

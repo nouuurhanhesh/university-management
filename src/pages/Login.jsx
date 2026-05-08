@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUsers, loginUser } from '../utils/storage';
 
@@ -27,6 +27,8 @@ export default function Login() {
         navigate('/student/courses');
       } else if (user.role === 'Parent') {
         navigate('/parent/dashboard');
+      } else if (user.role === 'Professor') {
+        navigate('/professor/messages');
       } else {
         navigate('/dashboard');
       }

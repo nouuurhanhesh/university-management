@@ -17,6 +17,7 @@ import StudentCourses from './pages/StudentCourses';
 import StudentMyCourses from './pages/StudentMyCourses';
 import StudentProfile from './pages/StudentProfile';
 import ParentDashboard from './pages/ParentDashboard';
+import ProfessorMessages from './pages/ProfessorMessages';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -30,6 +31,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     if (user.role === 'Facility Coordinator') return <Navigate to="/reservations" replace />;
     if (user.role === 'Student') return <Navigate to="/student/courses" replace />;
     if (user.role === 'Parent') return <Navigate to="/parent/dashboard" replace />;
+    if (user.role === 'Professor') return <Navigate to="/professor/messages" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -37,7 +39,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     <>
       <nav className="navbar">
         <div className="nav-brand">
-          <Link to={user.role === 'Facility Coordinator' ? '/reservations' : user.role === 'Student' ? '/student/courses' : user.role === 'Parent' ? '/parent/dashboard' : '/dashboard'} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 'bold', fontSize: '1.2rem' }}>
+          <Link to={user.role === 'Facility Coordinator' ? '/reservations' : user.role === 'Student' ? '/student/courses' : user.role === 'Parent' ? '/parent/dashboard' : user.role === 'Professor' ? '/professor/messages' : '/dashboard'} style={{ textDecoration: 'none', color: 'inherit', fontWeight: 'bold', fontSize: '1.2rem' }}>
             UniManage
           </Link>
         </div>
@@ -63,6 +65,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
           )}
           {user.role === 'Parent' && (
             <NavLink to="/parent/dashboard">Parent Portal</NavLink>
+          )}
+          {user.role === 'Professor' && (
+            <NavLink to="/professor/messages">Messages</NavLink>
           )}
         </div>
         <div className="nav-user-section">
@@ -115,6 +120,9 @@ function App() {
 
           {/* Parent Route */}
           <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={['Parent']}><ParentDashboard /></ProtectedRoute>} />
+
+          {/* Professor — parent messaging inbox */}
+          <Route path="/professor/messages" element={<ProtectedRoute allowedRoles={['Professor']}><ProfessorMessages /></ProtectedRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
