@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./RoomReservation.css";
 
-const DAYS = ['Mon 5', 'Tue 6', 'Wed 7', 'Thu 8', 'Fri 9'];
+const DAYS = ['Mon 4', 'Tue 5', 'Wed 6', 'Thu 7', 'Fri 8'];
 const TIMES = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'];
 const ROOMS = ['LH-101','SR-202','CR-305','LAB-410'];
 const dateMap = ['2026-05-05','2026-05-06','2026-05-07','2026-05-08','2026-05-09'];
